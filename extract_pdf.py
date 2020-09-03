@@ -102,7 +102,7 @@ for p0 in pdf.pages:
     # cell.append(cell_temp)
 
     for i in range(len(df.index) - 1):
-        # my_file.write("line " + str(i) + " : ")
+        my_file.write("line " + str(i) + " : ")
         count = 1
         cell_temp = []
         
@@ -112,7 +112,7 @@ for p0 in pdf.pages:
         for j in  range(len(df.columns)):
             
             ss = str(df.iloc[i, j])          
-            # my_file.write(str(j) + ":" + ss + "  ")
+            my_file.write(str(j) + ":" + ss + "  ")
             if ss != "None" :
                 word.append(ss)
                 count += 1
@@ -123,7 +123,7 @@ for p0 in pdf.pages:
 
             cell_temp.append( len(word) - 1)
         cell.append(cell_temp)
-        # my_file.write("\n")
+        my_file.write("\n")
 
     # Main Working Flow
     # Iterate through rows
