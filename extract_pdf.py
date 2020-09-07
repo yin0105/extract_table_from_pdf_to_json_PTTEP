@@ -56,12 +56,12 @@ for a in df:
             if ss != "nan" and ss.strip() != "":
                 t_word_tmp.append(" ".join(ss.splitlines()))
         t_word_page.append(t_word_tmp)
-        # if len(first_row_tmp) <2 and len(t_word_tmp) == 1 :
-        #     first_row_tmp.append(t_word_tmp[0])
+    #     if len(first_row_tmp) <2 and len(t_word_tmp) == 1 :
+    #         first_row_tmp.append(t_word_tmp[0])
         
-        # print(str(i) + "  " + str(c) + "  " + "::".join(t_word_tmp))
-    # first_row.append(first_row_tmp[1])
-    # print("first_row :: " + first_row_tmp[1])
+    #     print(str(i) + "  " + str(c) + "  " + "::".join(t_word_tmp))
+    # first_row.append(first_row_tmp[0])
+    # print("first_row :: " + first_row_tmp[0])
     t_word.append(t_word_page)
 
 
@@ -86,9 +86,9 @@ for p0 in pdf.pages:
     cell = [] # An array of index of cell data
     word = [] # An array of cell data
     # Parse the tables of PDF
-    table = p0.extract_table(table_settings={"vertical_strategy": "lines"})    
+    table = p0.extract_table()    
     # Change table to DataFrame of Pandas
-    df = pd.DataFrame(table[1:], columns=table[0])
+    df = pd.DataFrame(table[0:], columns=table[1])
 
     # Set an array of index of cell data and an array of cell data
     # Iterate through rows
@@ -101,33 +101,59 @@ for p0 in pdf.pages:
     #     cell_temp.append(len(word) - 1)
     # cell.append(cell_temp)
 
-    for i in range(len(df.index) - 1):
-        my_file.write("line " + str(i) + " : ")
+    for i in range(len(df.index)):
+        # my_file.write("line " + str(i) + " : \n")
         count = 1
-        cell_temp = []
-        
-
+        cell_temp = []        
         
         # Iterate through columns
+        afe_flag = False
         for j in  range(len(df.columns)):
             
             ss = str(df.iloc[i, j])          
-            my_file.write(str(j) + ":" + ss + "  ")
+            # my_file.write(str(j) + ":" + ss + "  ")
             if ss != "None" :
+                if ss.find("AFE & Field Estimated Cost") > -1 : 
+                    afe_flag = True
+                    for jj in range(len(ss.splitlines()) - 1):
+                        cell_temp = []
+                        sss = ss.splitlines()[jj].split(" ")
+                        sss_1 = " ".join(sss[:-2])
+                        sss_2 = " ".join(sss[-2:])
+                        word.append(sss_1)
+                        cell_temp.append(len(word) - 1)
+                        word.append(sss_2)
+                        for jjj in range(1, len(df.columns)):
+                            cell_temp.append(len(word) - 1)
+                        print("sss_1 = " + sss_1 + " sss_2 = " + sss_2)                        
+                        
+                        count += 2
+                        if jj < len(ss.splitlines()) - 2: cell.append(cell_temp) 
+                    break 
+                        
+                
                 word.append(ss)
                 count += 1
+                
             else:
                 if j == 0 or (str(df.iloc[i, 0]) == "Output" and (j == 1 or j == 15)) or (str(df.iloc[i, 0]) == "Output" and (j == 1 or j == 15)):
                     word.append("")
                     count += 1
 
-            cell_temp.append( len(word) - 1)
+            cell_temp.append(len(word) - 1)
         cell.append(cell_temp)
-        my_file.write("\n")
+        if afe_flag:
+            cell_temp = []
+            word.append('AFE & Field Estimated Cost')
+            for j in  range(len(df.columns)):
+               cell_temp.append( len(word) - 1) 
+            cell.append(cell_temp)
+        # my_file.write("\n")
 
     # Main Working Flow
     # Iterate through rows
-    for i in range(len(df.index) - 1):  
+    print("column count = " + str(len(df.columns)))
+    for i in range(len(df.index)):  
         # Iterate through columns
         for j in  range(len(df.columns)):
             ss = ""
@@ -141,23 +167,20 @@ for p0 in pdf.pages:
             k -= 1
             # data (or key of group)
             ww_2 = " ".join(word[cell[i][j]].splitlines())           
+            # print("ww_2::  " + ww_2 + "   i = " + str(i) + "  j = " + str(j) + "  k = " + str(k))
             # Whether data is group
-            if i < len(df.index)-2 and k > j: 
-                if (j == 0 or (j > 0 and cell[i+1][j-1] != cell[i+1][j])) and (k == len(df.columns) - 1 or (k < len(df.columns) - 1 and cell[i+1][k] != cell[i+1][k+1])) and (cell[i+1][j] != cell[i+1][k] or ww_2 in ["Well Information", "Daily Operations", "Daily Cost/Time Summary", "Mud/Fluid Checks", "Weather Conditions", "BHA Information", "Drilling Parameters", "Leak Off and Formation Integrity Tests", "Casing Pressure Tests", "BOP Pressure Tests"]) :
+            if i < len(df.index)-1 and k > j: 
+                # print("ww_2:::::  " + ww_2 + "   i = " + str(i) + "  j = " + str(j) + "  k = " + str(k))
+                if (j == 0 or (j > 0 and cell[i+1][j-1] != cell[i+1][j])) and (k == len(df.columns) - 1 or (k < len(df.columns) - 1 and cell[i+1][k] != cell[i+1][k+1])) and (cell[i+1][j] != cell[i+1][k] or ww_2 in ["Last Survey", "Team Leader, Supervisor, & Engineers", "AFE & Field Estimated Cost"]) :
                     # Get the number of rows in a group
-                    for ii in range(i+2, len(df.index) - 1): 
-                        if ww_2 == "Well Information" and word[cell[ii][j]] == "Health and Safety Summary": break
-                        if ww_2 == "Daily Cost/Time Summary" and word[cell[ii][j]] == "Time Log": break
-                        if ww_2 == "Mud/Fluid Checks" and word[cell[ii][j]] == "Weather Conditions": break
-                        if ww_2 == "Weather Conditions" and word[cell[ii][j]] == "Anchors": break
-                        if ww_2 == "BHA Information" and word[cell[ii][j]] == "Drilling Parameters": break
-                        if ww_2 == "Drilling Parameters" and word[cell[ii][j]] == "Directional": break
-                        if ww_2 == "Leak Off and Formation Integrity Tests" and word[cell[ii][j]] == "Casing Pressure Tests": break
-                        if ww_2 == "Casing Pressure Tests" and word[cell[ii][j]] == "BOP Pressure Tests": break
-                        if ww_2 == "BOP Pressure Tests" and word[cell[ii][j]] == "Equipment Pressure Test Data": break
+                    for ii in range(i+2, len(df.index)): 
+                        if ww_2 == "Last Survey" and word[cell[ii][j]] == "Team Leader, Supervisor, & Engineers": break
+                        if ww_2 == "Team Leader, Supervisor, & Engineers": print("word = " + str(word[cell[ii][j]]))
+                        if ww_2 == "Team Leader, Supervisor, & Engineers" and word[cell[ii][j]] == "AFE & Field Estimated Cost": break
+                        if ww_2 == "AFE & Field Estimated Cost" and word[cell[ii][j]] == "Safety": break
 
-                        if not ((j == 0 or (j > 0 and cell[ii][j-1] != cell[ii][j])) and (k == len(df.columns) - 1 or (k < len(df.columns) - 1 and cell[ii][k] != cell[ii][k+1])) and (cell[ii][j] != cell[ii][k] or ww_2 in ["Well Information", "Daily Operations", "Daily Cost/Time Summary", "Mud/Fluid Checks", "Weather Conditions", "BHA Information", "Drilling Parameters", "Leak Off and Formation Integrity Tests", "Casing Pressure Tests", "BOP Pressure Tests"])) : break
-                        if not(ww_2 in ["Well Information", "Daily Operations", "Daily Cost/Time Summary", "Mud/Fluid Checks", "Weather Conditions", "BHA Information", "Drilling Parameters", "Leak Off and Formation Integrity Tests", "Casing Pressure Tests", "BOP Pressure Tests"]):
+                        if not ((j == 0 or (j > 0 and cell[ii][j-1] != cell[ii][j])) and (k == len(df.columns) - 1 or (k < len(df.columns) - 1 and cell[ii][k] != cell[ii][k+1])) and (cell[ii][j] != cell[ii][k] or ww_2 in ["Last Survey", "Team Leader, Supervisor, & Engineers", "AFE & Field Estimated Cost"])) : break
+                        if not(ww_2 in ["Last Survey", "Team Leader, Supervisor, & Engineers", "AFE & Field Estimated Cost"]):
                             for jj in range(j+1, k+1): 
                                 if cell[ii][jj] - cell[ii-1][jj] != cell[ii][j] - cell[ii-1][j]:break
                             else:
@@ -165,10 +188,10 @@ for p0 in pdf.pages:
                             break
                     else:
                         if ii < i + 2: ii = i + 2                        
-                        if ii == len(df.index) - 2 : ii += 1
+                        if ii == len(df.index) - 1 : ii += 1
                     
               
-                    
+                    if ww_2 == "Team Leader, Supervisor, & Engineers": print("ii = " + str(ii))
                     if ww_2 == "Time Log":
                         pre_cell = -2
                         header = []
@@ -252,24 +275,34 @@ for p0 in pdf.pages:
                                                     write_into_file("\n")
                                                     write_into_file(ss)
                                                     break
-                    elif ww_2 in ["Health and Safety Summary", "Safety Checks", "Observation Cards", "Stop the Job", "Daily Offline Time Log Summary", "00:00 - 6:00 Time Log", "Anchors", "Transportation Information", "Directional", "Drill String Components", "Drill Bits", "Deviation Information", "Casing Information", "Equipment Pressure Test Data", "Tubing Strings", "Perforations", "Daily Contacts", "Personnel On Site", "Bulks/Consumables Information"]:
+                    elif ww_2 in ["Team Leader, Supervisor, & Engineers"]:
                         # col header
                         pre_cell = -2
                         header = []
                         # Get the columns data in group
+                        print("j = " + str(j) + " k = " + str(k))
                         for jj in range(j, k + 1):
                             if cell[i+1][jj] != pre_cell:
+                                print("ok")
                                 header.append(" ".join(word[cell[i+1][jj]].splitlines()))
+                                print(header[0])
                                 pre_cell = cell[i+1][jj]
                             cell[i+1][jj] = -1
+                        if header[0] == "Title Job Contact":
+                            header[0] ="Title"
+                            header.append("Job Contact")
                         # Get the columns data in group
                         for iii in range(i + 2, ii): 
                             header_cc = 0
                             sss = ""
+                            print(" i = " + str(i) + " iii = " + str(iii))
                             for jj in range(j, k + 1):
                                 if cell[iii][jj] != pre_cell:
+                                    print(str(header_cc) + str(header[0]))
                                     if header[header_cc] != "":
                                         if sss != "": sss += ", "
+                                        
+
                                         sss += '"' + header[header_cc] + '": "' + remove_special_characters(" ".join(word[cell[iii][jj]].splitlines())) + '" '
                                     pre_cell = cell[iii][jj]
                                     header_cc += 1
@@ -278,7 +311,7 @@ for p0 in pdf.pages:
                             if ss != "": ss += ", "
                             ss += sss                    
 
-                    elif ww_2 in ["Well Information", "Daily Operations", "Daily Cost/Time Summary", "Mud/Fluid Checks", "Weather Conditions", "Weather Conditions", "BHA Information", "Drilling Parameters", "Leak Off and Formation Integrity Tests", "Casing Pressure Tests", "BOP Pressure Tests"]:
+                    elif ww_2 in ["Last Survey", "AFE & Field Estimated Cost"]:
                         print("www = " + ww_2) 
                         pre_cell = -2
                         ss += "{\n"
@@ -323,13 +356,19 @@ for p0 in pdf.pages:
             # Output to output file
             if ww_2 != "": 
                 ww_2 = remove_special_characters(ww_2)
+                ww_2_0 = remove_special_characters(word[cell[i][j]].splitlines()[0])
                 if write_started:
                     # my_file.write(", \n")
                     write_into_file(", \n")
                 # if ww_2.__contains__("ype Time"):
                 #     # Remove special characters
                 #     ww_2 = ww_2.replace('"', '')
-                if ss != "" and ss[0] == "{": 
+                if ww_2_0 in ["Spud Date", "Depth Progress (m)", "Current Depth (mKB)", "Current Depth (TVD) (…", "Authorized MD (mKB)", "Water Depth (m)", "Orig KB Elev (m)", "KB-MudLn (m)", "PTTEP Field Name", "Block", "Country", "State/Province", "District", "Latitude (°)", "Longitude (°)", "Contractor", "Rig Name/No", "Rig Phone/Fax Number", "BHA Hrs of Service (hr)", "Leak Off Equivalent Fluid Density (lb/gal)", "Last Casing String", "Next Casing String"]:
+                    ww_2 = '"' + ww_2_0 + '": "'
+                    if len(word[cell[i][j]].splitlines()) > 1:
+                        ww_2 += remove_special_characters(" ".join(word[cell[i][j]].splitlines()[1:]))
+                    ww_2 += '"'
+                elif ss != "" and ss[0] == "{": 
                     #ww_2 = '"' + ww_2 + '": {\n'
                     ww_2 = '"' + ww_2 + '": [\n'
                 elif ww_2.find(":") > -1:
