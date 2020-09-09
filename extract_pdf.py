@@ -155,7 +155,7 @@ for p0 in pdf.pages:
                         elif jj == 1:
                             word.append(" ".join(sss[:6]) + "\n" + ss.splitlines()[jj + 1].split(" ")[0])
                             cell_temp.append(len(word) - 1)
-                            word.append(" ".join(sss[:6]) + "\n" + ss.splitlines()[jj + 1].split(" ")[0])
+                            word.append(" ".join(sss[6:]) + "\n" + ss.splitlines()[jj + 1].split(" ")[1])
 
                         for jjj in range(1, len(df.columns)):
                             cell_temp.append(len(word) - 1)
@@ -390,11 +390,11 @@ for p0 in pdf.pages:
                         cell_model = ssss[-4]
                         cell_make = " ".join(ssss[1:-4])
                         if cell_str == '':
-                            cell_str = '"Pump / Hydraulics": {\n[\n'
+                            cell_str = '"Pump / Hydraulics": {\n"": [\n'
                         else:
                             cell_str += ", \n"
                         cell_str += '{"Pump #": "' + str(cell_pump) + '", "Make": "' + str(cell_make) + '", "Model": "' + str(cell_model) + '", "Stroke (in)": "' + str(cell_stoke) + '", "Liner Size (in)": "' + str(cell_liner_size) + '"}'
-                    cell_str += '\n],\n[{"Pump #": "", "Eff (%)": "", "P (psi)": "", "Strokes (spm)": "", "Q Flow (gpm)": ""}]\n}'
+                    cell_str += '\n],\n" ": [{"Pump #": "", "Eff (%)": "", "P (psi)": "", "Strokes (spm)": "", "Q Flow (gpm)": ""}]\n}'
                     word.append(cell_str)
                     cell_temp = []
                     for jj in range(0, len(df.columns)):
@@ -404,7 +404,7 @@ for p0 in pdf.pages:
                 if ss in ["Bits"]:
                     skip_count = 1                    
                     add_row_count -= 1
-                    cell_str = '"Bits": [{"Bit Run": "", "Size (in)": "", "Make": "", "Model": "", "SN": "", "Nozzles (1/32\")": "", "Depth In(mKB)": "", "Date In": "", "Bit Dull": ""}]'
+                    cell_str = '"Bits": [{"Bit Run": "", "Size (in)": "", "Make": "", "Model": "", "SN": "", "Nozzles (1/32\\")": "", "Depth In(mKB)": "", "Date In": "", "Bit Dull": ""}]'
                     word.append(cell_str)
                     cell_temp = []
                     for jj in range(0, len(df.columns)):
@@ -535,7 +535,7 @@ for p0 in pdf.pages:
                                 cell_depart = ""
                                 cell_note = rest
                         else:
-                            cell_note += sss
+                            cell_note += " " + sss
                     else:
                         if cell_str != "": cell_str += ", \n"
                         cell_str += '{"Vessel Name": "' + cell_vessel + '", "Vessel Type": "Supply Vessel", "Arrival Date": "' + cell_arrival + '", "Note": "' + cell_note + '", "Depart Date": "' + cell_depart + '"}'
@@ -730,8 +730,7 @@ for p0 in pdf.pages:
                             for jj in range(j, k + 1):
                                 if cell[iii][jj] != pre_cell:
                                     if header[header_cc] != "":
-                                        if sss != "": sss += ", "
-                                        
+                                        if sss != "": sss += ", "                                
 
                                         sss += '"' + header[header_cc] + '": "' + remove_special_characters(" ".join(word[cell[iii][jj]].splitlines())) + '" '
                                     pre_cell = cell[iii][jj]
@@ -740,11 +739,14 @@ for p0 in pdf.pages:
                             sss = '{' + sss + '}'
                             if ss != "[\n": ss += ", \n"
                             ss += sss
-                        ss += sss + '\n]'
+                        ss += '\n]'
+                        print("ss = " + ss)
 
                     elif ww_2 in ["Last Survey", "AFE & Field Estimated Cost", "Safety Comments", "Mud Data", "Fann Data", "Weather", "Remarks"]:
                         print("www = " + ww_2) 
                         pre_cell = -2
+                        if ww_2 in ["Safety Comments"]:
+                            ss += "["
                         ss += "{"
                         for iii in range(i + 1, ii): 
                             sss = ""
@@ -762,9 +764,15 @@ for p0 in pdf.pages:
                                     pre_cell = cell[iii][jj]
                                 cell[iii][jj] = -1
                             if sss != "":
-                                if ss != "{": ss += ", "
+                                if ss != "{" and ss != "[{": 
+                                    if ww_2 in ["Safety Comments"]:
+                                        ss += "}, {"
+                                    else:
+                                        ss += ", "
                                 ss += sss
                         ss += "}"
+                        if ww_2 in ["Safety Comments"]:
+                            ss += "]"
 
                     elif ww_2 in ["Safety"]:
                         # print("www = " + ww_2) 
@@ -772,8 +780,6 @@ for p0 in pdf.pages:
                         ss += "{\n"
                         if ww_2 == "Safety":
                             add_row = 1
-                        elif ww_2 == "Operations Summary":
-                            add_row = 2
                         for iii in range(i + 1, i + 1 + add_row): 
                             sss = ""
                             for jj in range(j, k + 1):
@@ -792,7 +798,7 @@ for p0 in pdf.pages:
                             if sss != "":
                                 if ss != "{\n": ss += ", "
                                 ss += sss
-                        ss += ", \n[\n"
+                        ss += ', \n"":[\n'
                         pre_cell = -2
                         header = []
                         # Get the columns data in group
@@ -845,14 +851,16 @@ for p0 in pdf.pages:
                             if sss != "":
                                 if ss != "{\n": ss += ", \n"
                                 ss += sss
-                        ss += ", \n[\n"
+                        ss += ', \n"": [\n'
                         ss += word[cell[i + 1 + add_row][0]]
                         cell[i + 1 + add_row][0] = -1
+                        start_time_started = True
 
-                    elif ww_2.find('{"start_time":') == 0:
-                        ss += ", \n"
-                        ss += word[cell[i + 1 + add_row][0]]
-                        cell[i + 1 + add_row][0] = -1
+
+                    # elif ww_2.find('{"start_time":') == 0:
+                    #     # ss += ", \n"
+                    #     ss += word[cell[i + 1 + add_row][0]]
+                    #     cell[i + 1 + add_row][0] = -1
 
                         
                     else: # etc group
@@ -909,7 +917,7 @@ for p0 in pdf.pages:
                         ww_2 = ""
                 elif ww_2 == "Personnel":                    
                     if pre_ww_2 != ww_2_:
-                        ww_2 = ', \n"' + ww_2 + '": [\n'
+                        ww_2 = ', \n"' + ww_2 + '": {\n"": [\n'
                         vendor_started = False
                     else:
                         vendor_started = True
@@ -936,12 +944,12 @@ for p0 in pdf.pages:
 
                     if ww_2 in ["Weather", "Remarks"]:
                         write_into_file("\n]")
-                    if write_started:
+                    if write_started and ww_2.find("Time Log Total Hours (hr)") != 0 and ww_2.find('{"Vendor":') != 0 and ww_2.find("Head Count") != 0 and not(ww_2 in ["Mud Data"]):
                         write_into_file(", \n")
                     if ww_2.find("Time Log Total Hours (hr)") == 0:
-                        ww_2 = '],\n"' + word[cell[i][j]].splitlines()[0] + '": "' + str(word[cell[i][j]].splitlines()[1]) + '"\n}'
+                        ww_2 = '\n],\n"' + word[cell[i][j]].splitlines()[0] + '": "' + str(word[cell[i][j]].splitlines()[1]) + '"\n}'
                     elif ww_2.find("Head Count") == 0:
-                        ww_2 = '],\n"' + word[cell[i][j]].splitlines()[0] + '": "' + str(word[cell[i][j]].splitlines()[1]) + '"\n}'
+                        ww_2 = '\n],\n"' + word[cell[i][j]].splitlines()[0] + '": "' + str(word[cell[i][j]].splitlines()[1]) + '"\n}'
                     elif ww_2_0 in ["Spud Date", "Depth Progress (m)", "Current Depth (mKB)", "Current Depth (TVD) (…", "Authorized MD (mKB)", "Water Depth (m)", "Orig KB Elev (m)", "KB-MudLn (m)", "PTTEP Field Name", "Block", "Country", "State/Province", "District", "Latitude (°)", "Longitude (°)", "Contractor", "Rig Name/No", "Rig Phone/Fax Number", "BHA Hrs of Service (hr)", "Leak Off Equivalent Fluid Density (lb/gal)", "Last Casing String", "Next Casing String"]:
                         ww_2 = '"' + ww_2_0 + '": "'
                         if len(word[cell[i][j]].splitlines()) > 1:
@@ -958,6 +966,8 @@ for p0 in pdf.pages:
                         # Let's remove special characters if it's header
                         ww_2 = remove_special_characters(ww_2)
                         ww_2 = '"' + ww_2 + '": ""'
+
+                    if ww_2.find('"Mud Data":') == 0: ww_2 = "\n],\n" + ww_2
 
                 
 
