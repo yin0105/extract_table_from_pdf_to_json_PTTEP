@@ -42,11 +42,21 @@ elif len(sys.argv) >= 2:
 filename = os.path.basename(pdf_file)
 filename = filename[:filename.rfind(".")]
 
+# Open output text file
+filename += "_" + f"{dt_string}.txt"
+# filename = "output.txt"
+my_file = open(f"{output_path}\{filename}", "w", encoding="utf8")
+# write_into_file("{\n")
+
 # Get row data of the tables in a pdf file using tabula and Save them as array
 df = tabula.read_pdf(pdf_file, pages="all", guess = False, multiple_tables = True) 
 t_word = []
 # first_row = []
+page_num = 0 
+ss = ""
+write_into_file("{\n")
 for a in df:
+    page_num += 1
     # first_row_tmp = []
     t_word_page = []
     for i in range(len(a.index)):
@@ -55,12 +65,25 @@ for a in df:
         for c in a:
             ss = str(a.loc[i, c])
             if ss != "nan" and ss.strip() != "":
-                t_word_tmp.append(" ".join(ss.splitlines()))
+                sss = " ".join(ss.splitlines())
+                if page_num == 1 and i == 2:
+                    t_word_tmp.append(sss[:sss.find("Well Name")])
+                    t_word_tmp.append(sss[sss.find("Well Name"):]) 
+                else:         
+                    t_word_tmp.append(sss)
         t_word_page.append(t_word_tmp)
     #     if len(first_row_tmp) <2 and len(t_word_tmp) == 1 :
     #         first_row_tmp.append(t_word_tmp[0])
         
-    #     print(str(i) + "  " + str(c) + "  " + "::".join(t_word_tmp))
+        print(str(i) + "  " + str(c) + "  " + "::".join(t_word_tmp))
+
+        
+        if page_num == 1 and i < 5:
+            for tt in t_word_tmp:
+                ttt = tt.split(":")
+                write_into_file('"' + ttt[0].strip() + '": "' + str(ttt[1].strip()) + '", \n')
+
+        
     # first_row.append(first_row_tmp[0])
     # print("first_row :: " + first_row_tmp[0])
     t_word.append(t_word_page)
@@ -69,11 +92,7 @@ for a in df:
 # Parse a pdf file with pdfplumber
 pdf = pdfplumber.open(pdf_file) 
 
-# Open output text file
-# filename += "_" + f"{dt_string}.txt"
-filename = "output.txt"
-my_file = open(f"{output_path}\{filename}", "w", encoding="utf8")
-write_into_file("{\n")
+
 
 
 # Main Working Flow
